@@ -3,6 +3,9 @@ import { useTableStore } from "../../stores/tableStore";
 import { PartySummary } from "../table/PartySummary";
 import { SceneViewer } from "../table/SceneViewer";
 import { CharacterCard } from "../table/CharacterCard";
+import { DiceRoller } from "../table/DiceRoller";
+import { RestButtons } from "../table/RestButtons";
+import { QuestTracker } from "../table/QuestTracker";
 
 export function TableLayout() {
   const [leftWidth, setLeftWidth] = useState(260);
@@ -11,12 +14,17 @@ export function TableLayout() {
 
   return (
     <div className="flex h-full w-full">
-      {/* Sol Panel - Parti Özeti */}
+      {/* Sol Panel - Parti + Görevler */}
       <div
         className="flex-shrink-0 h-full border-r border-border overflow-hidden flex flex-col"
         style={{ width: leftWidth }}
       >
-        <PartySummary />
+        <div className="flex-1 overflow-hidden">
+          <PartySummary />
+        </div>
+        <div className="h-48 border-t border-border overflow-hidden">
+          <QuestTracker />
+        </div>
       </div>
 
       {/* Ayraç - Sol */}
@@ -38,9 +46,14 @@ export function TableLayout() {
         }}
       />
 
-      {/* Orta Panel - Sahne */}
-      <div className="flex-1 h-full overflow-hidden">
-        <SceneViewer />
+      {/* Orta Panel - Sahne + Zar */}
+      <div className="flex-1 h-full overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden">
+          <SceneViewer />
+        </div>
+        <div className="h-28 border-t border-border bg-surface">
+          <DiceRoller />
+        </div>
       </div>
 
       {/* Ayraç - Sağ */}
@@ -62,18 +75,23 @@ export function TableLayout() {
         }}
       />
 
-      {/* Sağ Panel - Canlı Durum */}
+      {/* Sağ Panel - Karakter + Dinlenme */}
       <div
         className="flex-shrink-0 h-full border-l border-border overflow-hidden flex flex-col"
         style={{ width: rightWidth }}
       >
-        {selectedCharacterId ? (
-          <CharacterCard />
-        ) : (
-          <div className="flex items-center justify-center h-full text-text-muted text-sm">
-            Bir karakter veya NPC seçin
-          </div>
-        )}
+        <div className="flex-1 overflow-hidden">
+          {selectedCharacterId ? (
+            <CharacterCard />
+          ) : (
+            <div className="flex items-center justify-center h-full text-text-muted text-sm">
+              Bir karakter veya NPC seçin
+            </div>
+          )}
+        </div>
+        <div className="border-t border-border p-2 bg-surface">
+          <RestButtons />
+        </div>
       </div>
     </div>
   );

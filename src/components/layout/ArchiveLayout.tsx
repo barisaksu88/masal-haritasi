@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useArchiveStore } from "../../stores/archiveStore";
 import { WorldTree } from "../archive/WorldTree";
 import { MapViewer } from "../archive/MapViewer";
+import { PinLayer } from "../archive/PinLayer";
 import { RecordDetail } from "../archive/RecordDetail";
 import { SearchPalette } from "../archive/SearchPalette";
 
@@ -39,9 +40,10 @@ export function ArchiveLayout() {
         }}
       />
 
-      {/* Orta Panel - Harita */}
-      <div className="flex-1 h-full overflow-hidden">
+      {/* Orta Panel - Harita + Pinler */}
+      <div className="flex-1 h-full overflow-hidden relative">
         <MapViewer />
+        <PinLayer mapWidth={1000} mapHeight={1000} />
       </div>
 
       {/* Ayraç - Sağ */}
