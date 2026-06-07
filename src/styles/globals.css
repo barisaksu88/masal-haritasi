@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #0f172a;
+    --background-secondary: #1e293b;
+    --background-tertiary: #334155;
+    --surface: #1e293b;
+    --surface-hover: #27354f;
+    --surface-active: #334155;
+    --border: #334155;
+    --border-light: #475569;
+    --text: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent: #d97706;
+    --accent-hover: #b45309;
+    --accent-light: #fbbf24;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #06b6d4;
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--background-secondary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-light);
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: var(--accent);
+    color: var(--background);
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-surface border border-border rounded-lg;
+  }
+
+  .panel-header {
+    @apply px-4 py-3 border-b border-border font-semibold text-text flex items-center gap-2;
+  }
+
+  .btn {
+    @apply px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-hover;
+  }
+
+  .btn-accent {
+    @apply btn bg-accent text-white hover:bg-accent-hover;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger text-white hover:bg-red-600;
+  }
+
+  .btn-ghost {
+    @apply btn text-text-secondary hover:text-text hover:bg-surface-hover;
+  }
+
+  .input {
+    @apply bg-background-secondary border border-border rounded-md px-3 py-2 text-sm text-text placeholder-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary;
+  }
+
+  .textarea {
+    @apply input resize-none;
+  }
+
+  .tree-item {
+    @apply flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary hover:text-text hover:bg-surface-hover cursor-pointer rounded-md transition-colors;
+  }
+
+  .tree-item.active {
+    @apply bg-surface-active text-text;
+  }
+
+  .tag {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-background-tertiary text-text-secondary;
+  }
+
+  .divider {
+    @apply h-px bg-border my-2;
+  }
+}
