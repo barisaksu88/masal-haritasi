@@ -6,10 +6,10 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "fs:default",
-    "fs:allow-read-file",
-    "fs:allow-write-file",
-    "fs:allow-read-dir",
-    "fs:allow-mkdir"
+    "fs:allow-app-read-recursive",
+    "fs:allow-app-write-recursive",
+    "fs:allow-rename",
+    "fs:allow-copy-file",
+    "fs:allow-remove"
   ]
 }

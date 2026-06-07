@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { WorldRecord, RecordType, Pin, Location } from '../types';
+import { useCampaignStore } from './campaignStore';
+import { saveRecord, deleteRecord, savePins } from '../services/campaignService';
 
 interface ArchiveStore {
   records: WorldRecord[];
@@ -10,22 +12,26 @@ interface ArchiveStore {
   isLoading: boolean;
 
   setRecords: (records: WorldRecord[]) => void;
-  addRecord: (record: WorldRecord) => void;
-  updateRecord: (id: string, updates: Partial<WorldRecord>) => void;
-  removeRecord: (id: string) => void;
+  addRecord: (record: WorldRecord) => Promise<void>;
+  updateRecord: (id: string, updates: Partial<WorldRecord>) => Promise<void>;
+  removeRecord: (id: string) => Promise<void>;
   setSelectedRecord: (id: string | null, type?: RecordType | null) => void;
   toggleNode: (id: string) => void;
   expandNode: (id: string) => void;
   collapseNode: (id: string) => void;
 
-  setPins: (pins: Pin[]) => void;
-  addPin: (pin: Pin) => void;
-  removePin: (id: string) => void;
-  updatePin: (id: string, updates: Partial<Pin>) => void;
+  setPins: (pins: Pin[]) => Promise<void>;
+  addPin: (pin: Pin) => Promise<void>;
+  removePin: (id: string) => Promise<void>;
+  updatePin: (id: string, updates: Partial<Pin>) => Promise<void>;
 
   getRecordById: (id: string) => WorldRecord | undefined;
   getRecordsByType: (type: RecordType) => WorldRecord[];
   getChildLocations: (parentId: string | null) => WorldRecord[];
+}
+
+function getCampaignPath(): string | null {
+  return useCampaignStore.getState().activeCampaign?.path ?? null;
 }
 
 export const useArchiveStore = create<ArchiveStore>((set, get) => ({
@@ -37,21 +43,52 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   isLoading: false,
 
   setRecords: (records) => set({ records }),
-  addRecord: (record) =>
-    set((state) => ({ records: [...state.records, record] })),
-  updateRecord: (id, updates) =>
-    set((state) => ({
-      records: state.records.map((r) =>
-        r.id === id ? ({ ...r, ...updates, updatedAt: new Date().toISOString() } as WorldRecord) : r
-      ),
-    })),
-  removeRecord: (id) =>
+
+  addRecord: async (record) => {
+    set((state) => ({ records: [...state.records, record] }));
+    const path = getCampaignPath();
+    if (path) {
+      await saveRecord(path, record);
+    }
+  },
+
+  updateRecord: async (id, updates) => {
+    let updatedRecord: WorldRecord | undefined;
+    set((state) => {
+      const records = state.records.map((r) => {
+        if (r.id === id) {
+          updatedRecord = { ...r, ...updates, updatedAt: new Date().toISOString() } as WorldRecord;
+          return updatedRecord;
+        }
+        return r;
+      });
+      return { records };
+    });
+    if (updatedRecord) {
+      const path = getCampaignPath();
+      if (path) {
+        await saveRecord(path, updatedRecord);
+      }
+    }
+  },
+
+  removeRecord: async (id) => {
+    const record = get().records.find((r) => r.id === id);
     set((state) => ({
       records: state.records.filter((r) => r.id !== id),
       pins: state.pins.filter((p) => p.recordId !== id),
-    })),
+    }));
+    if (record) {
+      const path = getCampaignPath();
+      if (path) {
+        await deleteRecord(path, record);
+      }
+    }
+  },
+
   setSelectedRecord: (id, type) =>
     set({ selectedRecordId: id, selectedRecordType: type ?? null }),
+
   toggleNode: (id) =>
     set((state) => {
       const next = new Set(state.expandedNodes);
@@ -72,14 +109,45 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
       return { expandedNodes: next };
     }),
 
-  setPins: (pins) => set({ pins }),
-  addPin: (pin) => set((state) => ({ pins: [...state.pins, pin] })),
-  removePin: (id) =>
-    set((state) => ({ pins: state.pins.filter((p) => p.id !== id) })),
-  updatePin: (id, updates) =>
+  setPins: async (pins) => {
+    set({ pins });
+    const path = getCampaignPath();
+    if (path) {
+      await savePins(path, pins);
+    }
+  },
+
+  addPin: async (pin) => {
+    set((state) => {
+      const pins = [...state.pins, pin];
+      return { pins };
+    });
+    const path = getCampaignPath();
+    if (path) {
+      await savePins(path, get().pins);
+    }
+  },
+
+  removePin: async (id) => {
+    set((state) => {
+      const pins = state.pins.filter((p) => p.id !== id);
+      return { pins };
+    });
+    const path = getCampaignPath();
+    if (path) {
+      await savePins(path, get().pins);
+    }
+  },
+
+  updatePin: async (id, updates) => {
     set((state) => ({
       pins: state.pins.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-    })),
+    }));
+    const path = getCampaignPath();
+    if (path) {
+      await savePins(path, get().pins);
+    }
+  },
 
   getRecordById: (id) => get().records.find((r) => r.id === id),
   getRecordsByType: (type) => get().records.filter((r) => r.type === type),

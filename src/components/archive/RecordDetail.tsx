@@ -4,9 +4,11 @@ import {
   WorldRecord,
   Location,
   NPC,
+  RecordType,
   RecordTypeLabels,
 } from "../../types";
-import { Star, Trash2, Link2 } from "lucide-react";
+import { Star, Trash2, Link2, Plus, X } from "lucide-react";
+import { useState } from "react";
 
 function isLocation(record: WorldRecord): record is Location {
   return record.type === "location";
@@ -307,16 +309,30 @@ export function RecordDetail(): React.ReactElement {
           <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">
             Etiketler
           </label>
-          <div className="flex flex-wrap gap-1.5">
-            {record.tags.length > 0 ? (
-              record.tags.map((tag) => (
-                <span key={tag} className="tag">
-                  {tag}
-                </span>
-              ))
-            ) : (
-              <span className="text-text-muted text-sm">Etiket yok</span>
-            )}
+          <div className="flex flex-wrap gap-1.5 items-center">
+            {record.tags.map((tag) => (
+              <span key={tag} className="tag flex items-center gap-1">
+                {tag}
+                <button
+                  onClick={() =>
+                    handleUpdate({
+                      tags: record.tags.filter((t) => t !== tag),
+                    })
+                  }
+                  className="hover:text-danger"
+                  title="Etiketi kaldır"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            <TagAdder
+              onAdd={(tag) =>
+                handleUpdate({
+                  tags: [...record.tags, tag],
+                })
+              }
+            />
           </div>
         </div>
 
@@ -344,14 +360,137 @@ export function RecordDetail(): React.ReactElement {
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                   {conn.relation}: {conn.targetId}
+                  <button
+                    onClick={() =>
+                      handleUpdate({
+                        connections: record.connections.filter((_, i) => i !== idx),
+                      })
+                    }
+                    className="ml-auto text-text-muted hover:text-danger"
+                    title="Bağlantıyı kaldır"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </li>
               ))}
             </ul>
           ) : (
             <span className="text-text-muted text-sm">Bağlı kayıt yok</span>
           )}
+          <ConnectionAdder
+            records={records}
+            currentRecordId={record.id}
+            onAdd={(targetId, relation, targetType) =>
+              handleUpdate({
+                connections: [
+                  ...record.connections,
+                  { targetId, relation, targetType },
+                ],
+              })
+            }
+          />
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   TAG ADDER
+   ================================================================ */
+
+function TagAdder({ onAdd }: { onAdd: (tag: string) => void }) {
+  const [value, setValue] = useState("");
+
+  const handleAdd = () => {
+    const trimmed = value.trim();
+    if (trimmed) {
+      onAdd(trimmed);
+      setValue("");
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleAdd();
+        }}
+        className="input text-xs py-1 px-2 w-32"
+        placeholder="Yeni etiket..."
+      />
+      <button
+        onClick={handleAdd}
+        className="p-1 rounded text-text-muted hover:text-accent transition-colors"
+        title="Etiket ekle"
+      >
+        <Plus className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+/* ================================================================
+   CONNECTION ADDER
+   ================================================================ */
+
+function ConnectionAdder({
+  records,
+  currentRecordId,
+  onAdd,
+}: {
+  records: WorldRecord[];
+  currentRecordId: string;
+  onAdd: (targetId: string, relation: string, targetType: RecordType) => void;
+}) {
+  const [targetId, setTargetId] = useState("");
+  const [relation, setRelation] = useState("");
+
+  const availableRecords = records.filter((r) => r.id !== currentRecordId);
+
+  const handleAdd = () => {
+    if (!targetId || !relation.trim()) return;
+    const target = records.find((r) => r.id === targetId);
+    if (!target) return;
+    onAdd(targetId, relation.trim(), target.type);
+    setTargetId("");
+    setRelation("");
+  };
+
+  return (
+    <div className="flex items-center gap-2 mt-2">
+      <select
+        value={targetId}
+        onChange={(e) => setTargetId(e.target.value)}
+        className="input text-xs py-1 px-2 flex-1"
+      >
+        <option value="">Kayıt seç...</option>
+        {availableRecords.map((r) => (
+          <option key={r.id} value={r.id}>
+            {RecordTypeLabels[r.type]}: {r.name}
+          </option>
+        ))}
+      </select>
+      <input
+        type="text"
+        value={relation}
+        onChange={(e) => setRelation(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleAdd();
+        }}
+        className="input text-xs py-1 px-2 w-28"
+        placeholder="İlişki..."
+      />
+      <button
+        onClick={handleAdd}
+        className="p-1 rounded text-text-muted hover:text-accent transition-colors"
+        title="Bağlantı ekle"
+      >
+        <Plus className="w-3.5 h-3.5" />
+      </button>
     </div>
   );
 }

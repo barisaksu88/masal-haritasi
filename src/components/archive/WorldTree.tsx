@@ -13,6 +13,7 @@ import {
   Search,
   Plus,
 } from "lucide-react";
+import { NewRecordDialog } from "../common/NewRecordDialog";
 
 const LevelIcons = [Globe, MapIcon, Building2, Home, Landmark, DoorOpen];
 
@@ -201,60 +202,69 @@ export function WorldTree(): React.ReactElement {
     [setSelectedRecord]
   );
 
+  const [isNewRecordOpen, setIsNewRecordOpen] = useState(false);
+
   const handleAddRecord = useCallback(() => {
-    // Placeholder — sonraki aşama
+    setIsNewRecordOpen(true);
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-surface">
-      {/* Header */}
-      <div className="panel-header border-b border-border flex-shrink-0">
-        <Globe className="w-4 h-4 text-accent" />
-        <span>DÜNYA AĞACI</span>
-      </div>
+    <>
+      <div className="flex flex-col h-full bg-surface">
+        {/* Header */}
+        <div className="panel-header border-b border-border flex-shrink-0">
+          <Globe className="w-4 h-4 text-accent" />
+          <span>DÜNYA AĞACI</span>
+        </div>
 
-      {/* Search */}
-      <div className="p-3 flex-shrink-0">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Ara..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input w-full pl-9"
-          />
+        {/* Search */}
+        <div className="p-3 flex-shrink-0">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+            <input
+              type="text"
+              placeholder="Ara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input w-full pl-9"
+            />
+          </div>
+        </div>
+
+        {/* Tree */}
+        <div className="flex-1 overflow-y-auto px-2 pb-2">
+          {filteredTree.length === 0 ? (
+            <div className="text-text-muted text-sm text-center py-4">
+              Kayıt bulunamadı
+            </div>
+          ) : (
+            <TreeNodeList
+              nodes={filteredTree}
+              selectedRecordId={selectedRecordId}
+              expandedNodes={expandedNodes}
+              onToggle={toggleNode}
+              onSelect={handleNodeClick}
+              forceExpanded={isSearching}
+            />
+          )}
+        </div>
+
+        {/* Add button */}
+        <div className="p-3 border-t border-border flex-shrink-0">
+          <button
+            onClick={handleAddRecord}
+            className="btn-accent w-full flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Yeni Kayıt Ekle
+          </button>
         </div>
       </div>
 
-      {/* Tree */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
-        {filteredTree.length === 0 ? (
-          <div className="text-text-muted text-sm text-center py-4">
-            Kayıt bulunamadı
-          </div>
-        ) : (
-          <TreeNodeList
-            nodes={filteredTree}
-            selectedRecordId={selectedRecordId}
-            expandedNodes={expandedNodes}
-            onToggle={toggleNode}
-            onSelect={handleNodeClick}
-            forceExpanded={isSearching}
-          />
-        )}
-      </div>
-
-      {/* Add button */}
-      <div className="p-3 border-t border-border flex-shrink-0">
-        <button
-          onClick={handleAddRecord}
-          className="btn-accent w-full flex items-center justify-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Yeni Kayıt Ekle
-        </button>
-      </div>
-    </div>
+      <NewRecordDialog
+        isOpen={isNewRecordOpen}
+        onClose={() => setIsNewRecordOpen(false)}
+      />
+    </>
   );
 }

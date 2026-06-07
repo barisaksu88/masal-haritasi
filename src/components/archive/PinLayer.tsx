@@ -31,7 +31,7 @@ export function PinLayer({
 
   return (
     <div
-      className="absolute inset-0 pointer-events-auto"
+      className="absolute inset-0 pointer-events-none"
       onClick={(e) => {
         if (!isAddingPin || !onPinAdd) return;
         const rect = e.currentTarget.getBoundingClientRect();
@@ -43,7 +43,7 @@ export function PinLayer({
       {pins.map((pin) => (
         <button
           key={pin.id}
-          className="absolute transform -translate-x-1/2 -translate-y-full group"
+          className="absolute transform -translate-x-1/2 -translate-y-full group pointer-events-auto"
           style={{
             left: `${(pin.x / mapWidth) * 100}%`,
             top: `${(pin.y / mapHeight) * 100}%`,

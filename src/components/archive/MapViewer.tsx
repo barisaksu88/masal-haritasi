@@ -18,7 +18,6 @@ export function MapViewer({ children }: MapViewerProps): React.ReactElement {
   const [translateY, setTranslateY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleWheel = useCallback((e: ReactWheelEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -72,10 +71,6 @@ export function MapViewer({ children }: MapViewerProps): React.ReactElement {
     []
   );
 
-  const handleUploadClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
   return (
     <div
       className="relative w-full h-full bg-background overflow-hidden"
@@ -104,7 +99,7 @@ export function MapViewer({ children }: MapViewerProps): React.ReactElement {
           </div>
           {/* Pin overlay */}
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 pointer-events-none"
             style={{
               transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
               transformOrigin: "center center",
@@ -113,38 +108,36 @@ export function MapViewer({ children }: MapViewerProps): React.ReactElement {
             {children}
           </div>
           {/* Change map button */}
-          <div className="absolute bottom-4 right-4 z-10">
-            <button
-              onClick={handleUploadClick}
-              className="btn-primary flex items-center gap-2 shadow-lg"
-              title="Başka harita yükle"
-            >
+          <div className="absolute bottom-4 right-4 z-20 pointer-events-auto">
+            <label className="btn-primary flex items-center gap-2 shadow-lg cursor-pointer">
               <ImagePlus className="w-4 h-4" />
               <span className="hidden sm:inline">Harita Değiştir</span>
-            </button>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </label>
           </div>
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center h-full gap-4">
+        <div className="flex flex-col items-center justify-center h-full gap-4 pointer-events-auto">
           <p className="text-text-muted text-sm">
             Harita yüklemek için butona tıklayın
           </p>
-          <button
-            onClick={handleUploadClick}
-            className="btn-primary flex items-center gap-2"
-          >
+          <label className="btn-primary flex items-center gap-2 cursor-pointer">
             <Upload className="w-4 h-4" />
             Harita Yükle
-          </button>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </label>
         </div>
       )}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
     </div>
   );
 }
