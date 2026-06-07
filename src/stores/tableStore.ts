@@ -49,7 +49,7 @@ interface TableStore {
   setSessionNotes: (notes: string) => void;
 }
 
-export const useTableStore = create<TableStore>((set, get) => ({
+export const useTableStore = create<TableStore>((set, _get) => ({
   party: [],
   npcStates: [],
   questStates: [],
@@ -102,7 +102,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
           : t
       ),
     })),
-  resetUsages: (resetType) =>
+  resetUsages: (_resetType) =>
     set((state) => ({
       usageTrackers: state.usageTrackers.map((t) => {
         // This is simplified; real logic would check feature resetType

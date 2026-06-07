@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Campaign, AppState, Notification } from '../types';
+import { Campaign } from '../types';
 
 interface CampaignStore {
   campaigns: Campaign[];

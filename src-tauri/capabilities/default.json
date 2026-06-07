@@ -7,15 +7,9 @@
     "core:default",
     "opener:default",
     "fs:default",
-    "fs:allow-read-dir",
     "fs:allow-read-file",
     "fs:allow-write-file",
-    "fs:allow-create",
-    "fs:allow-remove",
-    "fs:allow-rename",
-    "fs:allow-copy",
-    "fs:allow-mkdir",
-    "fs:allow-exists",
-    "fs:allow-stat"
+    "fs:allow-read-dir",
+    "fs:allow-mkdir"
   ]
 }

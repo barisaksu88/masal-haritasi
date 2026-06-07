@@ -42,7 +42,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   updateRecord: (id, updates) =>
     set((state) => ({
       records: state.records.map((r) =>
-        r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r
+        r.id === id ? ({ ...r, ...updates, updatedAt: new Date().toISOString() } as any) : r
       ),
     })),
   removeRecord: (id) =>
