@@ -49,7 +49,7 @@ interface TableStore {
   setSessionNotes: (notes: string) => void;
 }
 
-export const useTableStore = create<TableStore>((set, _get) => ({
+export const useTableStore = create<TableStore>((set) => ({
   party: [],
   npcStates: [],
   questStates: [],

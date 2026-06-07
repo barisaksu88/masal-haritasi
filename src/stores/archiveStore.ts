@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { WorldRecord, RecordType, Pin } from '../types';
+import { WorldRecord, RecordType, Pin, Location } from '../types';
 
 interface ArchiveStore {
   records: WorldRecord[];
@@ -42,7 +42,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   updateRecord: (id, updates) =>
     set((state) => ({
       records: state.records.map((r) =>
-        r.id === id ? ({ ...r, ...updates, updatedAt: new Date().toISOString() } as any) : r
+        r.id === id ? ({ ...r, ...updates, updatedAt: new Date().toISOString() } as WorldRecord) : r
       ),
     })),
   removeRecord: (id) =>
@@ -85,6 +85,6 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   getRecordsByType: (type) => get().records.filter((r) => r.type === type),
   getChildLocations: (parentId) =>
     get().records.filter(
-      (r) => r.type === 'location' && (r as any).parentId === parentId
+      (r): r is Location => r.type === 'location' && (r as Location).parentId === parentId
     ),
 }));
