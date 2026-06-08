@@ -8,6 +8,7 @@ interface ArchiveStore {
   pins: Pin[];
   selectedRecordId: string | null;
   selectedRecordType: RecordType | null;
+  activeRegionId: string | null;
   expandedNodes: Set<string>;
   isLoading: boolean;
 
@@ -16,6 +17,7 @@ interface ArchiveStore {
   updateRecord: (id: string, updates: Partial<WorldRecord>) => Promise<void>;
   removeRecord: (id: string) => Promise<void>;
   setSelectedRecord: (id: string | null, type?: RecordType | null) => void;
+  setActiveRegion: (id: string | null) => void;
   toggleNode: (id: string) => void;
   expandNode: (id: string) => void;
   collapseNode: (id: string) => void;
@@ -27,11 +29,18 @@ interface ArchiveStore {
 
   getRecordById: (id: string) => WorldRecord | undefined;
   getRecordsByType: (type: RecordType) => WorldRecord[];
-  getChildLocations: (parentId: string | null) => WorldRecord[];
+  getChildRegions: (parentId: string | null) => Location[];
+  getRecordsInRegion: (regionId: string | null) => WorldRecord[];
+  getRegionPath: (regionId: string) => Location[];
+  getRegionBreadcrumb: (regionId: string | null) => { id: string | null; name: string }[];
 }
 
 function getCampaignPath(): string | null {
   return useCampaignStore.getState().activeCampaign?.path ?? null;
+}
+
+function isLocation(record: WorldRecord): record is Location {
+  return record.type === 'location';
 }
 
 export const useArchiveStore = create<ArchiveStore>((set, get) => ({
@@ -39,6 +48,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   pins: [],
   selectedRecordId: null,
   selectedRecordType: null,
+  activeRegionId: null,
   expandedNodes: new Set(),
   isLoading: false,
 
@@ -88,6 +98,8 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
 
   setSelectedRecord: (id, type) =>
     set({ selectedRecordId: id, selectedRecordType: type ?? null }),
+
+  setActiveRegion: (id) => set({ activeRegionId: id, selectedRecordId: null, selectedRecordType: null }),
 
   toggleNode: (id) =>
     set((state) => {
@@ -151,8 +163,33 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
 
   getRecordById: (id) => get().records.find((r) => r.id === id),
   getRecordsByType: (type) => get().records.filter((r) => r.type === type),
-  getChildLocations: (parentId) =>
+
+  getChildRegions: (parentId) =>
     get().records.filter(
       (r): r is Location => r.type === 'location' && (r as Location).parentId === parentId
     ),
+
+  getRecordsInRegion: (regionId) =>
+    get().records.filter((r) => r.parentId === regionId),
+
+  getRegionPath: (regionId) => {
+    const path: Location[] = [];
+    let current = get().records.find((r) => r.id === regionId);
+    while (current && isLocation(current)) {
+      path.unshift(current);
+      if (!current.parentId) break;
+      current = get().records.find((r) => r.id === current!.parentId);
+    }
+    return path;
+  },
+
+  getRegionBreadcrumb: (regionId) => {
+    const result: { id: string | null; name: string }[] = [{ id: null, name: 'Dünya' }];
+    if (!regionId) return result;
+    const path = get().getRegionPath(regionId);
+    for (const loc of path) {
+      result.push({ id: loc.id, name: loc.name });
+    }
+    return result;
+  },
 }));

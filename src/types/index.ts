@@ -50,6 +50,7 @@ export interface BaseRecord {
   createdAt: string;
   updatedAt: string;
   isFavorite: boolean;
+  parentId?: string | null;
 }
 
 export interface Connection {
@@ -60,7 +61,6 @@ export interface Connection {
 
 export interface Location extends BaseRecord {
   type: 'location';
-  parentId: string | null;
   atmosphere: string;
   secretPassages: string;
   securityLevel: string;
@@ -179,6 +179,7 @@ export interface Pin {
   pinType: PinType;
   color: string;
   icon: string;
+  parentRegionId?: string;
 }
 
 export interface Campaign {
@@ -282,6 +283,8 @@ export interface Session {
 export interface UsageTracker {
   featureId: string;
   characterId: string;
+  resetType: ResetType;
+  maxUses: number;
   remainingUses: number;
   lastReset: string;
 }

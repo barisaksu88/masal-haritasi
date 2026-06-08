@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { useArchiveStore } from "../../stores/archiveStore";
 import {
   WorldRecord,
@@ -17,7 +17,7 @@ import {
   RecordType,
   RecordTypeLabels,
 } from "../../types";
-import { X, Save, Type } from "lucide-react";
+import { X, Save, Type, ChevronDown, Search } from "lucide-react";
 import { generateId } from "../../utils/fileUtils";
 
 interface NewRecordDialogProps {
@@ -60,7 +60,6 @@ function createEmptyRecord(type: RecordType, name: string): WorldRecord {
       return {
         ...base,
         type: "location",
-        parentId: null,
         atmosphere: "",
         secretPassages: "",
         securityLevel: "",
@@ -173,19 +172,140 @@ function createEmptyRecord(type: RecordType, name: string): WorldRecord {
   }
 }
 
+/* ================================================================
+   CUSTOM DROPDOWN (WebView'de native <select> çalışmıyor)
+   ================================================================ */
+
+function RecordDropdown({
+  records,
+  selectedId,
+  onSelect,
+  placeholder,
+}: {
+  records: WorldRecord[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  placeholder: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedRecord = records.find((r) => r.id === selectedId);
+
+  const filtered = search.trim()
+    ? records.filter((r) =>
+        r.name.toLowerCase().includes(search.toLowerCase())
+      )
+    : records;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        data-selected-record-id={selectedId}
+        onClick={() => setIsOpen(!isOpen)}
+        className="input w-full flex items-center justify-between text-left"
+      >
+        <span className={selectedRecord ? "text-text" : "text-text-muted"}>
+          {selectedRecord
+            ? `${selectedRecord.name} (${RecordTypeLabels[selectedRecord.type]})`
+            : placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-text-muted transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-surface border border-border rounded-md shadow-xl max-h-60 flex flex-col">
+          <div className="p-2 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-background-secondary border border-border rounded px-2 py-1.5 pl-7 text-sm text-text placeholder-text-muted focus:outline-none focus:border-primary"
+                placeholder="Ara..."
+                autoFocus
+              />
+            </div>
+          </div>
+
+          <div className="overflow-y-auto flex-1 p-1">
+            {filtered.length === 0 ? (
+              <div className="text-text-muted text-xs text-center py-3">
+                Kayıt bulunamadı
+              </div>
+            ) : (
+              filtered.map((record) => (
+                <button
+                  type="button"
+                  key={record.id}
+                  onClick={() => {
+                    onSelect(record.id);
+                    setIsOpen(false);
+                    setSearch("");
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                    selectedId === record.id
+                      ? "bg-primary/20 text-primary"
+                      : "text-text-secondary hover:bg-surface-hover hover:text-text"
+                  }`}
+                >
+                  <div className="font-medium">{record.name}</div>
+                  <div className="text-xs text-text-muted">
+                    {RecordTypeLabels[record.type]}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NewRecordDialog({ isOpen, onClose }: NewRecordDialogProps) {
   const addRecord = useArchiveStore((s) => s.addRecord);
   const setSelectedRecord = useArchiveStore((s) => s.setSelectedRecord);
+  const activeRegionId = useArchiveStore((s) => s.activeRegionId);
+  const records = useArchiveStore((s) => s.records);
 
   const [recordType, setRecordType] = useState<RecordType>("location");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [playerText, setPlayerText] = useState("");
   const [tags, setTags] = useState("");
+  const [parentRegionId, setParentRegionId] = useState<string>(activeRegionId ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const wasOpenRef = useRef(isOpen);
+
+  useLayoutEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      setParentRegionId(activeRegionId ?? "");
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen, activeRegionId]);
 
   if (!isOpen) return null;
+
+  const locationRecords = records.filter((r) => r.type === "location");
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -193,40 +313,54 @@ export function NewRecordDialog({ isOpen, onClose }: NewRecordDialogProps) {
       return;
     }
 
-    setSaving(true);
-    setError(null);
+    try {
+      setSaving(true);
+      setError(null);
 
-    const record = createEmptyRecord(recordType, name.trim());
-    record.description = description.trim();
-    record.playerText = playerText.trim();
-    record.tags = tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
+      const record = createEmptyRecord(recordType, name.trim());
+      record.description = description.trim();
+      record.playerText = playerText.trim();
+      record.tags = tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+      record.parentId = parentRegionId || null;
 
-    await addRecord(record);
-    setSelectedRecord(record.id, recordType);
+      await addRecord(record);
+      setSelectedRecord(record.id, recordType);
 
-    // Reset form
-    setName("");
-    setDescription("");
-    setPlayerText("");
-    setTags("");
-    setRecordType("location");
-    setSaving(false);
-    onClose();
+      setName("");
+      setDescription("");
+      setPlayerText("");
+      setTags("");
+      setRecordType("location");
+      setParentRegionId("");
+      onClose();
+    } catch {
+      setError("Kayıt kaydedilemedi. Lütfen tekrar deneyin.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-record-title"
+    >
       <div className="bg-surface border border-border rounded-lg shadow-2xl max-w-lg w-full mx-4 overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="px-5 py-3 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Type className="w-4 h-4 text-accent" />
-            <h2 className="text-sm font-semibold text-text">Yeni Kayıt</h2>
+            <h2 id="new-record-title" className="text-sm font-semibold text-text">
+              Yeni Kayıt
+            </h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1 rounded-md text-text-muted hover:text-text transition-colors"
           >
@@ -252,6 +386,19 @@ export function NewRecordDialog({ isOpen, onClose }: NewRecordDialogProps) {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Parent Region */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+              Üst Bölge
+            </label>
+            <RecordDropdown
+              records={locationRecords}
+              selectedId={parentRegionId}
+              onSelect={setParentRegionId}
+              placeholder="Bölge seçin..."
+            />
           </div>
 
           {/* Name */}
@@ -325,6 +472,7 @@ export function NewRecordDialog({ isOpen, onClose }: NewRecordDialogProps) {
         {/* Footer */}
         <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
           <button
+            type="button"
             onClick={onClose}
             className="btn-ghost px-4 py-2 text-sm"
             disabled={saving}
@@ -332,6 +480,7 @@ export function NewRecordDialog({ isOpen, onClose }: NewRecordDialogProps) {
             İptal
           </button>
           <button
+            type="button"
             onClick={handleSave}
             disabled={saving}
             className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"

@@ -102,11 +102,23 @@ export const useTableStore = create<TableStore>((set) => ({
           : t
       ),
     })),
-  resetUsages: (_resetType) =>
+  resetUsages: (resetType) =>
     set((state) => ({
       usageTrackers: state.usageTrackers.map((t) => {
-        // This is simplified; real logic would check feature resetType
-        return { ...t, remainingUses: t.remainingUses };
+        // Hangi reset türleri bu resetType'ı sıfırlar?
+        const shouldReset =
+          resetType === 'long_rest'
+            ? t.resetType === 'long_rest' || t.resetType === 'short_rest'
+            : resetType === 'short_rest'
+              ? t.resetType === 'short_rest'
+              : resetType === 'daily'
+                ? t.resetType === 'daily'
+                : false;
+
+        if (shouldReset) {
+          return { ...t, remainingUses: t.maxUses, lastReset: new Date().toISOString() };
+        }
+        return t;
       }),
     })),
 

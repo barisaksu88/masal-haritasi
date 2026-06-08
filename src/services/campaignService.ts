@@ -13,6 +13,19 @@ import type {
   Pin,
 } from '../types';
 
+const isBrowser = typeof window !== 'undefined' && !(window as any).__TAURI__;
+
+async function mockAppDataDir(): Promise<string> {
+  return '/mock/appdata';
+}
+
+async function mockJoin(...paths: string[]): Promise<string> {
+  return paths.join('/').replace(/\/+/g, '/');
+}
+
+const getAppDataDir = isBrowser ? mockAppDataDir : appDataDir;
+const pathJoin = isBrowser ? mockJoin : join;
+
 const BASE_FOLDER_NAME = 'Masal Haritalari';
 
 const WORLD_FOLDERS: string[] = [
@@ -31,8 +44,8 @@ const WORLD_FOLDERS: string[] = [
 ];
 
 async function getBasePath(): Promise<string> {
-  const appData = await appDataDir();
-  return await join(appData, BASE_FOLDER_NAME);
+  const appData = await getAppDataDir();
+  return await pathJoin(appData, BASE_FOLDER_NAME);
 }
 
 async function ensureBaseDir(): Promise<string> {
@@ -74,7 +87,7 @@ export async function createCampaign(
   const base = await ensureBaseDir();
 
   const safeName = sanitizeFilename(name);
-  const campaignPath = await join(base, safeName);
+  const campaignPath = await pathJoin(base, safeName);
 
   if (await fs.pathExists(campaignPath)) {
     throw new Error(`"${name}" isimli bir kampanya zaten mevcut.`);
@@ -92,7 +105,7 @@ export async function createCampaign(
   ];
 
   for (const folder of folders) {
-    const folderPath = await join(campaignPath, folder);
+    const folderPath = await pathJoin(campaignPath, folder);
     const ok = await fs.makeDirectory(folderPath);
     if (!ok) {
       throw new Error(`Klasör oluşturulamadı: ${folder}`);
@@ -116,7 +129,7 @@ export async function createCampaign(
     settings,
   };
 
-  const campaignJsonPath = await join(campaignPath, 'campaign.json');
+  const campaignJsonPath = await pathJoin(campaignPath, 'campaign.json');
   const ok = await fs.writeFile(campaignJsonPath, JSON.stringify(campaign, null, 2));
   if (!ok) {
     throw new Error('campaign.json yazılamadı.');
@@ -134,7 +147,7 @@ export async function createCampaign(
   });
 
   // Boş pins dosyası
-  const pinsPath = await join(campaignPath, 'pins.json');
+  const pinsPath = await pathJoin(campaignPath, 'pins.json');
   await fs.writeFile(pinsPath, JSON.stringify([], null, 2));
 
   return campaign;
@@ -157,8 +170,8 @@ export async function listCampaigns(): Promise<Campaign[]> {
   const campaigns: Campaign[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory) continue;
-    const campaignPath = await join(base, entry.name);
-    const campaignJsonPath = await join(campaignPath, 'campaign.json');
+    const campaignPath = await pathJoin(base, entry.name);
+    const campaignJsonPath = await pathJoin(campaignPath, 'campaign.json');
     const content = await fs.readFile(campaignJsonPath);
     if (content) {
       try {
@@ -180,7 +193,7 @@ export async function loadCampaign(campaignPath: string): Promise<{
   pins: Pin[];
   live: LiveState;
 } | null> {
-  const campaignJsonPath = await join(campaignPath, 'campaign.json');
+  const campaignJsonPath = await pathJoin(campaignPath, 'campaign.json');
   const campaignContent = await fs.readFile(campaignJsonPath);
   if (!campaignContent) return null;
 
@@ -195,12 +208,12 @@ export async function loadCampaign(campaignPath: string): Promise<{
   // Kayıtları yükle
   const records: WorldRecord[] = [];
   for (const folder of WORLD_FOLDERS) {
-    const folderPath = await join(campaignPath, 'world', folder);
+    const folderPath = await pathJoin(campaignPath, 'world', folder);
     const entries = await fs.readDirectory(folderPath);
     if (!entries) continue;
     for (const entry of entries) {
       if (!entry.name.endsWith('.json')) continue;
-      const filePath = await join(folderPath, entry.name);
+      const filePath = await pathJoin(folderPath, entry.name);
       const content = await fs.readFile(filePath);
       if (content) {
         try {
@@ -213,7 +226,7 @@ export async function loadCampaign(campaignPath: string): Promise<{
   }
 
   // Pinleri yükle
-  const pinsPath = await join(campaignPath, 'pins.json');
+  const pinsPath = await pathJoin(campaignPath, 'pins.json');
   const pinsContent = await fs.readFile(pinsPath);
   let pins: Pin[] = [];
   if (pinsContent) {
@@ -236,14 +249,14 @@ export async function loadCampaign(campaignPath: string): Promise<{
 
 export async function saveRecord(campaignPath: string, record: WorldRecord): Promise<boolean> {
   const folder = recordTypeToFolder(record.type);
-  const filePath = await join(campaignPath, 'world', folder, `${record.id}.json`);
+  const filePath = await pathJoin(campaignPath, 'world', folder, `${record.id}.json`);
   const updatedRecord = { ...record, updatedAt: new Date().toISOString() };
   return await writeJsonAtomic(filePath, updatedRecord);
 }
 
 export async function deleteRecord(campaignPath: string, record: WorldRecord): Promise<boolean> {
   const folder = recordTypeToFolder(record.type);
-  const filePath = await join(campaignPath, 'world', folder, `${record.id}.json`);
+  const filePath = await pathJoin(campaignPath, 'world', folder, `${record.id}.json`);
   return await fs.removeFile(filePath);
 }
 
@@ -252,7 +265,7 @@ export async function deleteRecord(campaignPath: string, record: WorldRecord): P
    ================================================================ */
 
 export async function savePins(campaignPath: string, pins: Pin[]): Promise<boolean> {
-  const pinsPath = await join(campaignPath, 'pins.json');
+  const pinsPath = await pathJoin(campaignPath, 'pins.json');
   return await writeJsonAtomic(pinsPath, pins);
 }
 
@@ -271,31 +284,31 @@ export interface LiveState {
 }
 
 async function readLiveState(campaignPath: string): Promise<LiveState> {
-  const livePath = await join(campaignPath, 'live');
+  const livePath = await pathJoin(campaignPath, 'live');
 
-  const party = await readJsonFile<PartyMember[]>(await join(livePath, 'party.json')) ?? [];
-  const npcStates = await readJsonFile<NPCLiveState[]>(await join(livePath, 'npc_states.json')) ?? [];
-  const questStates = await readJsonFile<QuestLiveState[]>(await join(livePath, 'quest_states.json')) ?? [];
-  const usageTrackers = await readJsonFile<UsageTracker[]>(await join(livePath, 'usage_trackers.json')) ?? [];
-  const sessions = await readJsonFile<Session[]>(await join(livePath, 'sessions_index.json')) ?? [];
-  const currentSession = await readJsonFile<Session | null>(await join(livePath, 'current_session.json')) ?? null;
-  const sessionNotes = (await fs.readFile(await join(livePath, 'session_notes.txt'))) ?? '';
+  const party = await readJsonFile<PartyMember[]>(await pathJoin(livePath, 'party.json')) ?? [];
+  const npcStates = await readJsonFile<NPCLiveState[]>(await pathJoin(livePath, 'npc_states.json')) ?? [];
+  const questStates = await readJsonFile<QuestLiveState[]>(await pathJoin(livePath, 'quest_states.json')) ?? [];
+  const usageTrackers = await readJsonFile<UsageTracker[]>(await pathJoin(livePath, 'usage_trackers.json')) ?? [];
+  const sessions = await readJsonFile<Session[]>(await pathJoin(livePath, 'sessions_index.json')) ?? [];
+  const currentSession = await readJsonFile<Session | null>(await pathJoin(livePath, 'current_session.json')) ?? null;
+  const sessionNotes = (await fs.readFile(await pathJoin(livePath, 'session_notes.txt'))) ?? '';
 
   return { party, npcStates, questStates, usageTrackers, currentSession, sessionNotes, sessions };
 }
 
 export async function writeLiveState(campaignPath: string, live: LiveState): Promise<boolean> {
-  const livePath = await join(campaignPath, 'live');
+  const livePath = await pathJoin(campaignPath, 'live');
   await fs.makeDirectory(livePath);
 
   const results = await Promise.all([
-    writeJsonAtomic(await join(livePath, 'party.json'), live.party),
-    writeJsonAtomic(await join(livePath, 'npc_states.json'), live.npcStates),
-    writeJsonAtomic(await join(livePath, 'quest_states.json'), live.questStates),
-    writeJsonAtomic(await join(livePath, 'usage_trackers.json'), live.usageTrackers),
-    writeJsonAtomic(await join(livePath, 'sessions_index.json'), live.sessions),
-    writeJsonAtomic(await join(livePath, 'current_session.json'), live.currentSession),
-    fs.writeFile(await join(livePath, 'session_notes.txt'), live.sessionNotes),
+    writeJsonAtomic(await pathJoin(livePath, 'party.json'), live.party),
+    writeJsonAtomic(await pathJoin(livePath, 'npc_states.json'), live.npcStates),
+    writeJsonAtomic(await pathJoin(livePath, 'quest_states.json'), live.questStates),
+    writeJsonAtomic(await pathJoin(livePath, 'usage_trackers.json'), live.usageTrackers),
+    writeJsonAtomic(await pathJoin(livePath, 'sessions_index.json'), live.sessions),
+    writeJsonAtomic(await pathJoin(livePath, 'current_session.json'), live.currentSession),
+    fs.writeFile(await pathJoin(livePath, 'session_notes.txt'), live.sessionNotes),
   ]);
 
   return results.every((r) => r);
@@ -306,11 +319,11 @@ export async function writeLiveState(campaignPath: string, live: LiveState): Pro
    ================================================================ */
 
 export async function saveSessionMarkdown(campaignPath: string, session: Session): Promise<boolean> {
-  const sessionsPath = await join(campaignPath, 'sessions');
+  const sessionsPath = await pathJoin(campaignPath, 'sessions');
   await fs.makeDirectory(sessionsPath);
 
   const fileName = `session_${String(session.number).padStart(3, '0')}.md`;
-  const filePath = await join(sessionsPath, fileName);
+  const filePath = await pathJoin(sessionsPath, fileName);
 
   const content = `# ${session.title}\n\n` +
     `**Oturum:** ${session.number}  \n` +
@@ -335,8 +348,53 @@ export async function saveSessionMarkdown(campaignPath: string, session: Session
 
 export async function updateCampaignMetadata(campaign: Campaign): Promise<boolean> {
   const updated = { ...campaign, updatedAt: new Date().toISOString() };
-  const campaignJsonPath = await join(campaign.path, 'campaign.json');
+  const campaignJsonPath = await pathJoin(campaign.path, 'campaign.json');
   return await writeJsonAtomic(campaignJsonPath, updated);
+}
+
+/* ================================================================
+   HARİTA RESMİ
+   ================================================================ */
+
+export async function saveMapImage(campaignPath: string, imageDataUrl: string, fileName: string = 'world_map.png'): Promise<string | null> {
+  const mapsPath = await pathJoin(campaignPath, 'assets', 'maps');
+  await fs.makeDirectory(mapsPath);
+
+  const filePath = await pathJoin(mapsPath, fileName);
+
+  // data:image/png;base64,... → sadece base64 kısmı
+  const base64 = imageDataUrl.split(',')[1];
+  if (!base64) return null;
+
+  // Base64 → binary
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  const ok = await fs.writeBinaryFile(filePath, bytes);
+  return ok ? filePath : null;
+}
+
+export async function loadMapImage(campaignPath: string): Promise<string | null> {
+  const mapsPath = await pathJoin(campaignPath, 'assets', 'maps');
+  const filePath = await pathJoin(mapsPath, 'world_map.png');
+  
+  const exists = await fs.pathExists(filePath);
+  if (!exists) return null;
+
+  const bytes = await fs.readBinaryFile(filePath);
+  if (!bytes) return null;
+
+  // Uint8Array → base64
+  let binary = '';
+  const len = bytes.length;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = btoa(binary);
+  return `data:image/png;base64,${base64}`;
 }
 
 /* ================================================================
