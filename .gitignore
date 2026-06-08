@@ -35,8 +35,8 @@ AGENT_WORKFLOW.md
 CONTINUE_PROMPT.md
 plan.md
 
-# Build artifacts
-*.exe
+# Build artifacts (only build output, not root installer)
+src-tauri/target/**/*.exe
 
 # App data / saves
 campaigns/
