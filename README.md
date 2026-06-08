@@ -31,8 +31,6 @@ Bu proje **Tauri (Rust + WebView)** ile geliştirilmiştir. Electron yerine Taur
 | Yerel dosya sistemi | Doğal entegrasyon | IPC karmaşası |
 | Güvenlik | Rust'ın bellek güvenliği | Daha fazla attack surface |
 
-Kullanıcı arkadaşına "indir, kur, çalıştır" diyecek kadar basit bir deneyim istedi. 150 MB installer bu deneyimi bozardı.
-
 ---
 
 ## Özellikler
